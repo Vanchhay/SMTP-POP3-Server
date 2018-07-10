@@ -23,7 +23,7 @@ public class SMTPClient {
 		while (true) {
 
 	// Create socket
-			Socket emailSocket = new Socket("10.10.18.143", 465);
+			Socket emailSocket = new Socket("10.10.17.150", 465);
 	// Get user's command
 			System.out.print("Client: ");
 			requestInput = new BufferedReader(new InputStreamReader(System.in));

@@ -2,6 +2,9 @@ import java.io.*;
 import java.net.*;
 
 class SMTPServer {
+
+	private static Socket connectionSocket;
+
 	public static void main(String argv[]) throws Exception {
 		String command;
 		ServerSocket welcomeSocket = new ServerSocket(465);
@@ -9,11 +12,11 @@ class SMTPServer {
 		while (true) {
 
 			// Get connection
-			Socket connectionSocket = welcomeSocket.accept();
+			connectionSocket = welcomeSocket.accept();
 
 			//	get input from client
 			BufferedReader inFromClient = new BufferedReader(new InputStreamReader(connectionSocket.getInputStream()));
-			command = inFromClient.readLine().trim().toUpperCase();
+			command = inFromClient.readLine();
 			System.out.println(command);
 
 			if (command.equalsIgnoreCase("error")){
@@ -26,11 +29,21 @@ class SMTPServer {
 
 			// response to client
 			DataOutputStream outToClient = new DataOutputStream(connectionSocket.getOutputStream());
-
 			String str[] = command.split(" ");
-			switch (str[0]) {
+
+			processCommand(str[0]);
+//			inFromClient.close();
+		}
+	}
+
+	public static void processCommand(String command) throws Exception{
+
+		DataOutputStream outToClient = null;
+		try{
+			outToClient = new DataOutputStream(connectionSocket.getOutputStream());
+			switch (command.trim().toUpperCase()) {
 				case "HELO":
-					outToClient.writeBytes("250 Hello "+ str[1]);
+					outToClient.writeBytes("250 Hello ");
 					break;
 				case "MAIL FROM":
 					outToClient.writeBytes("250 OK");
@@ -43,12 +56,15 @@ class SMTPServer {
 					break;
 				case "QUIT":
 					outToClient.writeBytes("221 Bye");
+					connectionSocket.close();
 					break;
 				default:
 					outToClient.writeBytes("Undefined Command");
 					break;
 			}
-			connectionSocket.close();
+		}catch(IOException e){
+			e.printStackTrace();
 		}
+//		outToClient.close();
 	}
 }
