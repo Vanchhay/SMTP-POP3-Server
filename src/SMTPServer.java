@@ -2,69 +2,78 @@ import java.io.*;
 import java.net.*;
 
 class SMTPServer {
-
-	private static Socket connectionSocket;
-
+	protected final static String CRLF = "\r\n";
 	public static void main(String argv[]) throws Exception {
 		String command;
-		ServerSocket welcomeSocket = new ServerSocket(465);
+		ServerSocket welcomeSocket = new ServerSocket(6782);
+		EmailMessage email;
 
 		while (true) {
 
 			// Get connection
-			connectionSocket = welcomeSocket.accept();
+			Socket connectionSocket = welcomeSocket.accept();
 
-			//	get input from client
 			BufferedReader inFromClient = new BufferedReader(new InputStreamReader(connectionSocket.getInputStream()));
+			DataOutputStream outToClient = new DataOutputStream(connectionSocket.getOutputStream());
+
 			command = inFromClient.readLine();
-			System.out.println(command);
-
-			if (command.equalsIgnoreCase("error")){
-				System.out.println("Received: " + command);
-				DataOutputStream outToClient = new DataOutputStream(connectionSocket.getOutputStream());
-				outToClient.writeBytes("220 Bad Request !! DONOT command error");
-			}
-
 			System.out.println("Received: " + command);
 
-			// response to client
-			DataOutputStream outToClient = new DataOutputStream(connectionSocket.getOutputStream());
-			String str[] = command.split(" ");
+			// Spliting command
+			String splitedCommand[] = command.split(":", 2);
 
-			processCommand(str[0]);
-//			inFromClient.close();
-		}
-	}
-
-	public static void processCommand(String command) throws Exception{
-
-		DataOutputStream outToClient = null;
-		try{
-			outToClient = new DataOutputStream(connectionSocket.getOutputStream());
-			switch (command.trim().toUpperCase()) {
+			switch (splitedCommand[0].trim().toUpperCase()) {
 				case "HELO":
-					outToClient.writeBytes("250 Hello ");
+					outToClient.writeBytes("250 Hello" + CRLF);
 					break;
 				case "MAIL FROM":
-					outToClient.writeBytes("250 OK");
+					email = new EmailMessage();
+					if(email.getStatus().isEmpty()){
+						email.setStatus(email.MAIL_FROM);
+					}
+					String mailFrom = splitedCommand[1].replaceAll("[<,>]", "").trim();
+
+					if(isValidEmail(mailFrom)){
+						email.setMailFrom(mailFrom);
+						outToClient.writeBytes("250 " + mailFrom + "Accepted" + CRLF);
+					}else{
+						outToClient.writeBytes("421 unsupported domain!!");
+					}
 					break;
 				case "RCPT TO":
-					outToClient.writeBytes("250 OK");
+					outToClient.writeBytes("250 OK" + CRLF);
 					break;
 				case "DATA":
-					outToClient.writeBytes("250 Ok message accepted for delivery: queued as 12345");
+					outToClient.writeBytes("250 Ok message accepted for delivery: queued as 12345" + CRLF);
 					break;
 				case "QUIT":
-					outToClient.writeBytes("221 Bye");
+					outToClient.writeBytes("221 Bye" + CRLF);
+					System.out.println("QUIT");
+					inFromClient.close();
 					connectionSocket.close();
 					break;
 				default:
 					outToClient.writeBytes("Undefined Command");
 					break;
 			}
-		}catch(IOException e){
-			e.printStackTrace();
 		}
-//		outToClient.close();
 	}
+
+	public static boolean isValidEmail(String email){
+
+		String [] hostDomain = email.split("@",0);
+		hostDomain = hostDomain[1].split("[.]",0);
+
+		final String domain = hostDomain[0].trim();
+
+		String[] supportedDomain = {"gmail", "yahoo"};
+		for (String support : supportedDomain) {
+			if(support.equalsIgnoreCase(domain)){
+				return true;
+			}
+		}
+		System.out.println("returning false");
+		return false;
+	}
+
 }
