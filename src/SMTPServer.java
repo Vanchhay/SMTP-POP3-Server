@@ -115,6 +115,9 @@ class SMTPServer {
 						connectionSocket.close();
 						break;
 					default:
+						System.out.println("Default");
+						outToClient.writeBytes("Please try again! "+CRLF);
+						break;
 
 				}
 			}
