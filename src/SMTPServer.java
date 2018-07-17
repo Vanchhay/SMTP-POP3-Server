@@ -19,18 +19,21 @@ class SMTPServer {
 			BufferedReader inFromClient = new BufferedReader(new InputStreamReader(connectionSocket.getInputStream()));
 			DataOutputStream outToClient = new DataOutputStream(connectionSocket.getOutputStream());
 
+			if(connectionSocket.isConnected()){
+				outToClient.writeBytes("250" +CRLF);
+			}
+
 			while(!connectionSocket.isClosed()) {
 				command = inFromClient.readLine();
 				System.out.println("Received: " + command);
 
 				// Spliting command
 				String splitedCommand[];
-				if (command.startsWith("HELO")){
-					splitedCommand = command.split(" ", 2);
-				}else{
+				if (command.startsWith("HELO")) {
+					splitedCommand = command.split(" ",2);
+				} else {
 					splitedCommand = command.split(":",2);
 				}
-
 				switch (splitedCommand[0].trim().toUpperCase()) {
 					case "HELO":
 						outToClient.writeBytes("250 Hello " +CRLF);
