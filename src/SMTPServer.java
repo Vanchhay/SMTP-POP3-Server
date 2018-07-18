@@ -188,6 +188,7 @@ class SMTPServer {
 
 			// Extracting MailTo list
 			for (String to : email.getMailTo()) {
+				to = getHostOfEmail(to);
 				mailTo = mailTo.concat(to + ",");
 			}
 			// Execute a query
@@ -224,5 +225,10 @@ class SMTPServer {
 			}
 		}
 		return true;
+	}
+
+	public static String getHostOfEmail(String email){
+		int chAtIndex = email.indexOf("@");
+		return email.substring(0, chAtIndex);
 	}
 }
