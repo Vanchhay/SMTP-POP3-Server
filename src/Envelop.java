@@ -15,6 +15,13 @@ public class Envelop {
 	protected final String DATA = "DATA";
 	protected final String SENT = "SENT";
 
+	public Envelop(String subject, String message, String mailFrom, List<String> mailTo) {
+		this.subject = subject;
+		this.message = message;
+		this.mailFrom = mailFrom;
+		this.mailTo = mailTo;
+	}
+
 	public Envelop() {
 		this.status = MAIL_FROM;
 	}
