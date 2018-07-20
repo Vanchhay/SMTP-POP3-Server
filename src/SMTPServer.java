@@ -108,33 +108,45 @@ class SMTPServer {
 						while(true) {
 							email.setStatus(email.DATA);
 							data = inFromClient.readLine().trim();
-							if(data.startsWith("Subject:")){
-								String subject = data.substring(8).trim();
-								email.setSubject(subject);
-							}
-							if(data.trim().startsWith(".")){
-								if(addToH2(email)) {
-									email.setStatus(email.SENT);
-									outToClient.writeBytes("250 Email has successfully sent." + CRLF);
-									success = true;
-									break;
-								}
-							}
-							if(!data.isEmpty()){ // if successfully sent
-								if(startMessage){
-									email.setMessage(email.getMessage().concat(data + '\n'));
-								}
-							}
-							if(data.startsWith("Content-Transfer-Encoding")){
+							/**
+							 * when startMessage true then only record new
+							 */
+							System.out.println(data);
+							if (data.getBytes().length == 0) {
+								System.out.println("Start add message");
 								startMessage = true;
+								continue;
+							}
+							if(!data.isEmpty()){
+								if(startMessage){
+									if(data.trim().startsWith(".")){
+										if(addToH2(email)) {
+											email.setStatus(email.SENT);
+											System.out.println("SUCCESS ADD TO H2");
+											outToClient.writeBytes("250 Email has successfully sent." + CRLF);
+											break;
+										}else{
+											outToClient.writeBytes("552 Transaction Fail." + CRLF);
+											break;
+										}
+									}
+									System.out.println(data);
+									email.setMessage(email.getMessage().concat(data + '\n'));
+									continue;
+								} else{
+									email.setHeader(email.getHeader().concat(data + '\n'));
+									if(data.startsWith("Subject")) {
+										email.setSubject(data.substring(9));
+										continue;
+									}
+									if(data.startsWith("Message-ID")) {
+										email.setMeetingID(getHostOfEmail(data.substring(12).replaceAll("[<,>]", "").trim()));
+									}
+									continue;
+								}
 							}
 						}
-						if(success) {
-							break;
-						}else{
-							outToClient.writeBytes("552 Transaction Fail." + CRLF);
-							break;
-						}
+						break;
 					case "QUIT":
 						System.out.println("==============================");
 						System.out.println("STATUS: "+ email.getStatus());
@@ -194,6 +206,8 @@ class SMTPServer {
 			// Execute a query
 			stmt = conn.createStatement();
 			String sql = "insert into mail values(null, "+
+					"'"+email.getMeetingID()+"'," +
+					"'"+email.getHeader()+"'," +
 					"'"+email.getSubject()+"'," +
 					"'"+email.getMessage()+"', " +
 					"'"+email.getMailFrom()+"', " +
