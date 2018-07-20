@@ -7,6 +7,9 @@ public class Envelop {
 	private String subject;
 	private String message = "";
 	private String status;
+	private String header = "";
+	private String meetingID;
+
 	private  List<String> mailTo = new ArrayList<>();
 //	, mailCc, mailBcc;
 
@@ -15,7 +18,9 @@ public class Envelop {
 	protected final String DATA = "DATA";
 	protected final String SENT = "SENT";
 
-	public Envelop(String subject, String message, String mailFrom, List<String> mailTo) {
+	public Envelop(String meetingID, String header, String subject, String message, String mailFrom, List<String> mailTo) {
+		this.meetingID = meetingID;
+		this.header = header;
 		this.subject = subject;
 		this.message = message;
 		this.mailFrom = mailFrom;
@@ -64,6 +69,22 @@ public class Envelop {
 
 	public void setMailTo(String mailTo) {
 		this.mailTo.add(mailTo);
+	}
+
+	public String getHeader() {
+		return header;
+	}
+
+	public void setHeader(String header) {
+		this.header = header;
+	}
+
+	public String getMeetingID() {
+		return meetingID;
+	}
+
+	public void setMeetingID(String meetingID) {
+		this.meetingID = meetingID;
 	}
 
 //	public List<String> getMailCc() {
