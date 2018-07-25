@@ -1,13 +1,9 @@
-import org.h2.engine.Database;
-
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.nio.channels.IllegalBlockingModeException;
-import java.security.cert.CRL;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -34,140 +30,175 @@ public class POP3Server {
 	protected final String TRANSACTION = "TRANSACTION";
 	protected final String UPDATE = "UPDATE";
 
-	public static void main(String[] args) throws Exception{
-		String command;
-		int port = 110;
-		ServerSocket server = new ServerSocket(port);
+	public static void main(String[] args){
 
-		String user = null;
-		List<Envelop> mails = new ArrayList<>();
-		HashMap<String, Envelop> envelopHashMap = new HashMap<>();
-		int totalByte = 0;
+			String command;
+			int port = 110;
 
+			String user = null;
+			List<Envelop> mails = new ArrayList<>();
+			HashMap<String, Envelop> envelopHashMap = new HashMap<>();
+			int totalByte = 0;
 
-		while(true){
-			Socket client = server.accept();
-			System.out.println("Client connected : " +client);
+		ServerSocket server = null;
+		try{
+			server = new ServerSocket(port);
+		}catch(IOException e){
+			e.printStackTrace();
+		}
 
-			BufferedReader inFromClient = new BufferedReader(new InputStreamReader(client.getInputStream()));
-			DataOutputStream outToClient = new DataOutputStream(client.getOutputStream());
+		while (true) {
+			Socket client = null;
+			try {
+				client = server.accept();
+				System.out.println("Client connected : " + client);
 
-			if(client.isConnected()){
-				System.out.println("response to client");
-				outToClient.writeBytes("+OK" +CRLF);
-			}
+				BufferedReader inFromClient = new BufferedReader(new InputStreamReader(client.getInputStream()));
+				DataOutputStream outToClient = new DataOutputStream(client.getOutputStream());
 
-			while(!client.isClosed()){
-				command = inFromClient.readLine();
-				System.out.println("Command: "+command);
+				if (client.isConnected()) {
+					System.out.println("Connection Accepted");
+					outToClient.writeBytes("+OK" + CRLF);
+				}
 
-				switch (command.substring(0,4).toUpperCase()){
-					case "AUTH":
-						System.out.println("AUTH commanded");
-						outToClient.writeBytes("+OK" +CRLF + "." + CRLF);
-						break;
-					case "CAPA":
-						System.out.println("CAPA commanded");
-						outToClient.writeBytes("+OK" + CRLF +"."+ CRLF);
-						break;
-					case "USER":
-						user = command.substring(5).trim();
-						System.out.println("USER commanded: " + user);
-						outToClient.writeBytes("+OK now send PASS "+CRLF);
-						break;
-					case "PASS":
-						String pass = command.substring(5).trim();
-						System.out.println("PASS COMMENDED: ");
-						outToClient.writeBytes("+OK procced your wish" +CRLF);
-						break;
-					case "STAT":
-						System.out.println("STAT commanded :" +user);
-						mails = getInboxWhereFrom(user);
-						int count=0;
-						for (Envelop envelop : mails) {
-							totalByte += envelop.getMessage().getBytes().length;
-							count++;
-						}
-						System.out.println("Response: +OK "+count + " " +totalByte);
-						outToClient.writeBytes("+OK "+count + " " +totalByte + CRLF);
-						break;
-					case "LIST":
-						System.out.println("LIST COMMENDED: " +command);
+				while (!client.isClosed()) {
+					command = inFromClient.readLine();
+					System.out.println("Command: " + command);
 
-						String msg = command.trim().substring(4).trim();
-						if( msg.length() > 0 ){
-							int index = Integer.valueOf(msg);
-							if( (index-1)> mails.size() ){
-								outToClient.writeBytes("-ERR no such message, Please check the LIST again.");
-							} else {
-								outToClient.writeBytes("+OK " + index + " " + mails.get(index - 1).getMessage().length() + CRLF);
-							}
-						}
-						if(msg.length() == 0){
-							outToClient.writeBytes("+OK "+mails.size() + " " +totalByte +CRLF);
-							for (int i = 0; i < mails.size() ; i++) {
-								outToClient.writeBytes( (i+1) +" " + mails.get(i).getMessage().getBytes().length +CRLF);
-							}
-							outToClient.writeBytes(CRLF +"."+ CRLF);
-						}
-						break;
-					case "UIDL":
-						System.out.println("UIDL commanded: "+envelopHashMap.size() );
-						if(envelopHashMap.size() == 0){
-							for (Envelop envelop : mails) {
-								String key = genKey(envelopHashMap);
-								envelopHashMap.put( key, envelop);
-							}
-						}
-						if(envelopHashMap.size() > 0) {
-							outToClient.writeBytes("+OK" + CRLF);
-							int index = 1;
-							for (String key : envelopHashMap.keySet()) {
-								System.out.println( (index) +" "+ key);
-								outToClient.writeBytes((index++) +" "+ key +CRLF);
-							}
-							outToClient.writeBytes(CRLF + "." + CRLF);
-						}
-						break;
-					case "RETR":
-						int index = Integer.valueOf(command.substring(5));
-
-						System.out.println("+OK " +mails.get(index-1).getMessage().length() +"\n");
-						System.out.println("--- ");
-						System.out.println(mails.get(index-1).getHeader() +CRLF);
-						System.out.println(mails.get(index-1).getMessage());
-						System.out.println(CRLF + "." +CRLF);
-
-						outToClient.writeBytes("+OK " +mails.get(index-1).getMessage().length() + CRLF);
-						outToClient.writeBytes(mails.get(index-1).getHeader() + CRLF);
-						outToClient.writeBytes(mails.get(index-1).getMessage());
-						outToClient.writeBytes(CRLF +"."+ CRLF);
-						break;
-					case "DELE":
-						// Delete from H2
-						int i = Integer.valueOf(command.substring(5));
-						System.out.println("SENDING MEEING ID =====  "+mails.get(i-1).getMeetingID());
-
-						if(deleteEmail(mails.get(i-1).getMeetingID())){
-							System.out.println("DELETED");
-							outToClient.writeBytes("+OK Message Deleted" +CRLF);
+					switch (command.substring(0,4).toUpperCase()) {
+						case "AUTH":
+							System.out.println("AUTH commanded");
+							outToClient.writeBytes("+OK" + CRLF + "." + CRLF);
 							break;
-						}
-						outToClient.writeBytes("-ERR" +CRLF);
-						break;
-					case "QUIT":
-						System.out.println("QUIT COMMENDED: ");
-						outToClient.writeBytes("+OK" +CRLF);
-						client.close();
-						break;
-					default:
-						System.out.println("Undefined command: ( " +command+ " )");
-						outToClient.writeBytes("-ERR Undefined command");
-						break;
+						case "CAPA":
+							System.out.println("CAPA commanded");
+							outToClient.writeBytes("+OK" + CRLF);
+							outToClient.writeBytes("AUTH" + CRLF);
+							outToClient.writeBytes("USER" + CRLF);
+							outToClient.writeBytes("PASS" + CRLF);
+							outToClient.writeBytes("STAT" + CRLF);
+							outToClient.writeBytes("LIST []" + CRLF);
+							outToClient.writeBytes("UIDL" + CRLF);
+							outToClient.writeBytes("RETR" + CRLF);
+							outToClient.writeBytes("DELE" + CRLF);
+							outToClient.writeBytes("QUIT" + CRLF);
+							outToClient.writeBytes("+OK" + CRLF + "." + CRLF);
+							break;
+						case "USER":
+							user = command.substring(5).trim();
+							System.out.println("USER commanded: " + user);
+							outToClient.writeBytes("+OK" + CRLF);
+							break;
+						case "PASS":
+							String pass = command.substring(5).trim();
+							System.out.println("PASS COMMENDED: ");
+							outToClient.writeBytes("+OK procced your wish" + CRLF);
+							break;
+						case "STAT":
+							System.out.println("STAT commanded :" + user);
+							mails = getInboxWhereFrom(user);
+							int count = 0;
+							for (Envelop envelop : mails) {
+								totalByte += envelop.getMessage().getBytes().length;
+								count++;
+							}
+							System.out.println("Response: +OK " + count + " " + totalByte);
+							outToClient.writeBytes("+OK " + count + " " + totalByte + CRLF);
+							break;
+						case "LIST":
+							System.out.println("LIST COMMENDED: " + command);
 
+							String msg = command.trim().substring(4).trim();
+							if (msg.length() > 0) {
+								int index = Integer.valueOf(msg);
+								if ((index - 1) > mails.size()) {
+									outToClient.writeBytes("-ERR no such message, Please check the LIST again.");
+								} else {
+									outToClient.writeBytes("+OK " + index + " " + mails.get(index - 1).getMessage().length() + CRLF);
+								}
+							}
+							if (msg.length() == 0) {
+								outToClient.writeBytes("+OK " + mails.size() + " " + totalByte + CRLF);
+								for (int i = 0; i < mails.size(); i++) {
+									outToClient.writeBytes((i + 1) + " " + mails.get(i).getMessage().getBytes().length + CRLF);
+								}
+								outToClient.writeBytes(CRLF + "." + CRLF);
+							}
+							break;
+						case "UIDL":
+							System.out.println("UIDL commanded: " + envelopHashMap.size());
+							if (envelopHashMap.size() == 0) {
+								for (Envelop envelop : mails) {
+									String key = genKey(envelopHashMap);
+									envelopHashMap.put(key,envelop);
+								}
+							}
+							if (envelopHashMap.size() > 0) {
+								outToClient.writeBytes("+OK" + CRLF);
+								int index = 1;
+								for (String key : envelopHashMap.keySet()) {
+									System.out.println((index) + " " + key);
+									outToClient.writeBytes((index++) + " " + key + CRLF);
+								}
+								outToClient.writeBytes(CRLF + "." + CRLF);
+							}
+							break;
+						case "RETR":
+							int index = Integer.valueOf(command.substring(5));
+
+							System.out.println("+OK " + mails.get(index - 1).getMessage().length() + "\n");
+							System.out.println("--- ");
+							System.out.println(mails.get(index - 1).getHeader() + CRLF);
+							System.out.println(mails.get(index - 1).getMessage());
+							System.out.println(CRLF + "." + CRLF);
+
+							outToClient.writeBytes("+OK " + mails.get(index - 1).getMessage().length() + CRLF);
+							outToClient.writeBytes(mails.get(index - 1).getHeader() + CRLF);
+							outToClient.writeBytes(mails.get(index - 1).getMessage());
+							outToClient.writeBytes(CRLF + "." + CRLF);
+							break;
+						case "DELE":
+							// Delete from H2
+							int i = Integer.valueOf(command.substring(5));
+							System.out.println("SENDING MEEING ID =====  " + mails.get(i - 1).getMeetingID());
+
+							if (deleteEmail(mails.get(i - 1).getMeetingID())) {
+								System.out.println("DELETED");
+								outToClient.writeBytes("+OK Message Deleted" + CRLF);
+								break;
+							}
+							outToClient.writeBytes("-ERR" + CRLF);
+							break;
+						case "QUIT":
+							System.out.println("QUIT COMMENDED: ");
+							outToClient.writeBytes("+OK" + CRLF);
+							client.close();
+							break;
+						default:
+							System.out.println("Undefined command: ( " + command + " )");
+							outToClient.writeBytes("-ERR Undefined command");
+							break;
+					}
+				}
+			} catch(IndexOutOfBoundsException e){
+				System.out.println(e.getMessage());
+			} catch(IOException e){
+				e.printStackTrace();
+			} catch(NullPointerException e){
+				e.printStackTrace();
+			} catch(Exception e){
+				System.out.println(e.getClass() + " === " + e.getMessage());
+			} finally {
+				try{
+					mails = null;
+					client.close();
+					System.out.println("Exception Occured => Connection closed");
+				}catch(IOException e){
+					e.printStackTrace();
 				}
 			}
 		}
+
 	}
 
 	public static List<Envelop> getInboxWhereFrom(String mailFrom){
