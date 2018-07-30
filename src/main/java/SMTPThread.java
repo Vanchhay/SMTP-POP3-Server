@@ -202,30 +202,32 @@ public class SMTPThread extends Thread{
 		Statement stmt = null;
 
 		try{
-			String mailTo = "";
+//			String mailTo = "";
 
 			conn = new H2Database().getConnection();
 
 			// Extracting MailTo list
-			for (String to : email.getMailTo()) {
-				to = getHostOfEmail(to);
-				mailTo = mailTo.concat(to + ",");
-			}
+//			for (String to : email.getMailTo()) {
+//				to = getHostOfEmail(to);
+//				mailTo = mailTo.concat(to + ",");
+//			}
 			// Execute a query
 			stmt = conn.createStatement();
-			String sql = "insert into mail values(null, "+
-					"'"+email.getMeetingID()+"'," +
-					"'"+email.getHeader()+"'," +
-					"'"+email.getSubject()+"'," +
-					"'"+email.getMessage()+"', " +
-					"'"+email.getMailFrom()+"', " +
-					"'"+mailTo+"', " +
-					"'cc@gmail.com,cc1@gmail.com', " +
-					"'bcc@gmail.com,bcc1@gmail.com', " +
-					"current_timestamp()" +
-					")";
+			for (String mailTo : email.getMailTo()) {
+				String sql = "insert into mail values(null, " +
+						"'" + email.getMeetingID() + "'," +
+						"'" + email.getHeader() + "'," +
+						"'" + email.getSubject() + "'," +
+						"'" + email.getMessage() + "', " +
+						"'" + email.getMailFrom() + "', " +
+						"'" + mailTo + "', " +
+						"'cc@gmail.com,cc1@gmail.com', " +
+						"'bcc@gmail.com,bcc1@gmail.com', " +
+						"current_timestamp()" +
+						")";
 
-			stmt.executeUpdate(sql);
+				stmt.executeUpdate(sql);
+			}
 
 			stmt.close();
 			conn.close();

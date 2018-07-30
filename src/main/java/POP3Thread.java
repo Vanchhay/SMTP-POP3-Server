@@ -173,10 +173,12 @@ public class POP3Thread extends Thread {
 						int i = Integer.valueOf(command.substring(5));
 						System.out.println("SENDING MEEING ID =====  " + mails.get(i - 1).getMeetingID());
 
-						if (deleteEmail(mails.get(i - 1).getMeetingID())) {
-							System.out.println("DELETED");
-							outToClient.writeBytes("+OK Message Deleted" + CRLF);
-							break;
+						for(String mailTo : mails.get(i - 1).getMailTo()) {
+							if (deleteEmail(mails.get(i - 1).getMeetingID(), mailTo)) {
+								System.out.println("DELETED");
+								outToClient.writeBytes("+OK Message Deleted" + CRLF);
+								break;
+							}
 						}
 						outToClient.writeBytes("-ERR" + CRLF);
 						break;
@@ -207,7 +209,7 @@ public class POP3Thread extends Thread {
 		}
 	}
 
-	public List<Envelop> getInboxWhereFrom(String mailFrom){
+	public List<Envelop> getInboxWhereFrom(String mailTo){
 
 		Connection conn = null ;
 		Statement stmt = null;
@@ -219,15 +221,15 @@ public class POP3Thread extends Thread {
 
 			// Execute a query
 			stmt = conn.createStatement();
-			String sql = "SELECT * FROM MAIL WhERE MAIL_FROM='"+mailFrom+"' ORDER BY CREATE_AT DESC;";
+			String sql = "SELECT * FROM MAIL WhERE MAIL_TO='"+mailTo+"' ORDER BY CREATE_AT DESC;";
 
 			ResultSet rs = stmt.executeQuery(sql);
 
 			while(rs.next()){
 
-				List<String> mailTo = new ArrayList<>();
+				List<String> mailToList = new ArrayList<>();
 				for (String s : rs.getString("MAIL_TO").split(",")) {
-					mailTo.add(s);
+					mailToList.add(s);
 				}
 				Envelop envelop = new Envelop(
 						rs.getString("MEETINGID"),
@@ -235,7 +237,7 @@ public class POP3Thread extends Thread {
 						rs.getString("SUBJECT"),
 						rs.getString("MESSAGE"),
 						rs.getString("MAIL_FROM"),
-						mailTo  );
+						mailToList  );
 
 				mails.add(envelop);
 			}
@@ -259,7 +261,7 @@ public class POP3Thread extends Thread {
 		return mails;
 	}
 
-	public boolean deleteEmail(String meetingID){
+	public boolean deleteEmail(String meetingID, String mailTo){
 		Connection conn = null;
 		Statement stmt = null;
 
@@ -269,7 +271,7 @@ public class POP3Thread extends Thread {
 			// Execute a query
 			stmt = conn.createStatement();
 			System.out.println("DELETING MEEING ID : "+meetingID);
-			String sql = "DELETE FROM MAIL WHERE MEETINGID='"+ meetingID +"';";
+			String sql = "DELETE FROM MAIL WHERE MEETINGID='"+ meetingID +"' AND MAIL_TO='"+ mailTo +"';";
 
 			stmt.executeUpdate(sql);
 
