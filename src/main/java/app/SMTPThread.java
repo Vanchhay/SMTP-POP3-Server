@@ -10,7 +10,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 
-public class SMTPThread extends Thread{
+public class SMTPThread extends Thread {
 
 	protected final static String CRLF = "\r\n";
 
@@ -192,7 +192,7 @@ public class SMTPThread extends Thread{
 				return true;
 			}
 		}
-		return false;
+		return true;
 	}
 
 	public String extractEmail(String unExtractMail){
@@ -204,28 +204,31 @@ public class SMTPThread extends Thread{
 		Statement stmt = null;
 
 		try{
-//			String mailTo = "";
-
 			conn = new H2Database().getConnection();
-
-			// Extracting MailTo list
-//			for (String to : email.getMailTo()) {
-//				to = getHostOfEmail(to);
-//				mailTo = mailTo.concat(to + ",");
-//			}
-			// Execute a query
 			stmt = conn.createStatement();
+
+			String sql = "CREATE TABLE IF NOT EXISTS MAIL(" +
+					"ID BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT," +
+					"MEETINGID VARCHAR(225) NOT NULL," +
+					"HEADER TEXT NOT NULL," +
+					"SUBJECT VARCHAR(50)," +
+					"MESSAGE TEXT," +
+					"MAIL_FROM VARCHAR(50) NOT NULL," +
+					"MAIL_TO VARCHAR(50) NOT NULL," +
+					"CREATE_AT TIMESTAMP DEFAULT CURRENT_TIMESTAMP," +
+					")";
+			stmt.executeUpdate(sql);
+
+			// Execute a query
 			for (String mailTo : email.getMailTo()) {
-				String str = "To: " + mailTo +"\n";
-				String sql = "insert into mail values(null, " +
+				String str = "To: " + mailTo + "\n";
+				sql = "INSERT INTO mail VALUES (NULL, " +
 						"'" + email.getMeetingID() + "'," +
 						"'" + str + email.getHeader() + "'," +
 						"'" + email.getSubject() + "'," +
 						"'" + email.getMessage() + "', " +
 						"'" + email.getMailFrom() + "', " +
 						"'" + mailTo + "', " +
-						"'cc@gmail.com,cc1@gmail.com', " +
-						"'bcc@gmail.com,bcc1@gmail.com', " +
 						"current_timestamp()" +
 						")";
 
