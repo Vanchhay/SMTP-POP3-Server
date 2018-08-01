@@ -114,6 +114,9 @@ public class SMTPThread extends Thread{
 							/**
 							 * when startMessage true then only record new
 							 */
+							if(data.startsWith("To:")){
+								continue;
+							}
 
 							if (data.getBytes().length == 0) {
 								if (!startMessage) {
@@ -214,9 +217,10 @@ public class SMTPThread extends Thread{
 			// Execute a query
 			stmt = conn.createStatement();
 			for (String mailTo : email.getMailTo()) {
+				String str = "To: " + mailTo +"\n";
 				String sql = "insert into mail values(null, " +
 						"'" + email.getMeetingID() + "'," +
-						"'" + email.getHeader() + "'," +
+						"'" + str + email.getHeader() + "'," +
 						"'" + email.getSubject() + "'," +
 						"'" + email.getMessage() + "', " +
 						"'" + email.getMailFrom() + "', " +
