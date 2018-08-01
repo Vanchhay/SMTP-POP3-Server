@@ -13,7 +13,6 @@ public class Envelop {
 	private String meetingID;
 
 	private  List<String> mailTo = new ArrayList<>();
-//	, mailCc, mailBcc;
 
 	protected final String MAIL_FROM = "MAIL FROM";
 	protected final String RCPT_TO = "RCPT TO";
@@ -89,19 +88,4 @@ public class Envelop {
 		this.meetingID = meetingID;
 	}
 
-//	public List<String> getMailCc() {
-//		return mailCc;
-//	}
-//
-//	public void setMailCc(String mailCc) {
-//		this.mailCc.add(mailCc);
-//	}
-//
-//	public List<String> getMailBcc() {
-//		return mailBcc;
-//	}
-//
-//	public void setMailBcc(String mailBcc) {
-//		this.mailBcc.add(mailBcc);
-//	}
 }
