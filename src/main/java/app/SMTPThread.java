@@ -141,8 +141,8 @@ public class SMTPThread extends Thread {
 									if (data.trim().startsWith(".")) {
 										if (addToH2(email)) {
 											email.setStatus(email.SENT);
-											LOGGER.info(this.getName() + " ADDED TO H2");
-											outToClient.writeBytes(" DATA_MESSAGE 250 Email has successfully sent." + CRLF);
+											outToClient.writeBytes("250 Email has successfully sent." + CRLF);
+											LOGGER.info(this.getName() + " DATA_MESSAGE ADDED TO H2");
 											break;
 										} else {
 											outToClient.writeBytes("552 Transaction Fail." + CRLF);
@@ -218,7 +218,7 @@ public class SMTPThread extends Thread {
 			conn = new H2Database().getConnection();
 			stmt = conn.createStatement();
 
-			String sql = "CREATE TABLE IF NOT EXISTS MAIL(" +
+			String table = "CREATE TABLE IF NOT EXISTS MAIL(" +
 					"ID BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT," +
 					"MEETINGID VARCHAR(225) NOT NULL," +
 					"HEADER TEXT NOT NULL," +
@@ -228,12 +228,12 @@ public class SMTPThread extends Thread {
 					"MAIL_TO VARCHAR(50) NOT NULL," +
 					"CREATE_AT TIMESTAMP DEFAULT CURRENT_TIMESTAMP," +
 					")";
-			stmt.executeUpdate(sql);
+			stmt.executeUpdate(table);
 
 			// Execute a query
 			for (String mailTo : email.getMailTo()) {
 				String str = "To: " + mailTo + "\n";
-				sql = "INSERT INTO mail VALUES (NULL, " +
+				String insert = "INSERT INTO mail VALUES (NULL, " +
 						"'" + email.getMeetingID() + "'," +
 						"'" + str + email.getHeader() + "'," +
 						"'" + email.getSubject() + "'," +
@@ -243,7 +243,7 @@ public class SMTPThread extends Thread {
 						"current_timestamp()" +
 						")";
 
-				stmt.executeUpdate(sql);
+				stmt.executeUpdate(insert);
 			}
 
 			stmt.close();
