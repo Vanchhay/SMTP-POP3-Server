@@ -202,7 +202,6 @@ public class POP3Thread extends Thread {
 		} finally {
 			try{
 				client.close();
-				System.out.println("Exception Occured => Connection closed");
 			}catch(IOException e){
 				e.printStackTrace();
 			}
