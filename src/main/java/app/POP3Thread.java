@@ -1,5 +1,8 @@
 package app;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -15,12 +18,11 @@ import java.util.Random;
 public class POP3Thread extends Thread {
 
 	protected static final String CRLF = "\r\n";
+	private final static Logger LOGGER = LoggerFactory.getLogger(POP3Thread.class);
 
 	/* Client's status */
 	protected final String UNAUTH = "UNAUTH";
-	protected final String AUTH = "AUTH";
 	protected final String TRANSACTION = "TRANSACTION";
-	protected final String UPDATE = "UPDATE";
 
 	public String clientStatus;
 
@@ -50,21 +52,20 @@ public class POP3Thread extends Thread {
 				this.clientStatus = this.UNAUTH;
 				inFromClient = new BufferedReader(new InputStreamReader(client.getInputStream()));
 				outToClient = new DataOutputStream(client.getOutputStream());
-				System.out.println("Connection Accepted");
 				outToClient.writeBytes("+OK" + CRLF);
+				LOGGER.info(this.getName() + " GREETING");
 			}
 
 			while (!client.isClosed()) {
 				command = inFromClient.readLine();
-				System.out.println("Command: " + command);
 
 				switch (command.substring(0,4).toUpperCase()) {
 					case "AUTH":
-						System.out.println("AUTH commanded");
 						outToClient.writeBytes("+OK" + CRLF + "." + CRLF);
+						LOGGER.info(this.getName() + " AUTH +OK");
 						break;
 					case "CAPA":
-						System.out.println("CAPA commanded");
+						LOGGER.info(this.getName() + " COMMENDED: " + command);
 						outToClient.writeBytes("+OK" + CRLF);
 						outToClient.writeBytes("AUTH" + CRLF);
 						outToClient.writeBytes("USER" + CRLF);
@@ -76,49 +77,55 @@ public class POP3Thread extends Thread {
 						outToClient.writeBytes("DELE" + CRLF);
 						outToClient.writeBytes("QUIT" + CRLF);
 						outToClient.writeBytes("+OK" + CRLF + "." + CRLF);
+						LOGGER.info(this.getName() + " CAPA +OK");
 						break;
 					case "USER":
 						user = command.substring(5).trim();
-						System.out.println("USER commanded: " + user);
+						this.setName(user);
+						LOGGER.info("[" + this.getName() + "]");
 
 						if(user.length() == 0 ){
-							outToClient.writeBytes("-ERR Cannot find email");
+							outToClient.writeBytes("-ERR Cannot find email" +CRLF);
+							LOGGER.info(this.getName() + " USER -ERR Cannot find matched email");
 						}
 						outToClient.writeBytes("+OK" + CRLF);
+						LOGGER.info(this.getName() + " USER OK");
 						break;
 					case "PASS":
 //						String pass = command.substring(5).trim();
-						System.out.println("PASS COMMENDED: ");
 						outToClient.writeBytes("+OK procced your wish" + CRLF);
+						LOGGER.info(this.getName() + " PASS: <>");
 						this.clientStatus = this.TRANSACTION;
 						break;
 					case "STAT":
 						if(!this.clientStatus.equalsIgnoreCase(this.TRANSACTION)){
 							outToClient.writeBytes("-ERR Requrired to make AUTH" +CRLF);
+							LOGGER.info(this.getName() + " STAT -ERR Requrired to make AUTH" );
 						}
-						System.out.println("STAT commanded :" + user);
 						mails = getInboxWhereFrom(user);
 						int count = 0;
 						for (Envelop envelop : mails) {
 							totalByte += envelop.getMessage().getBytes().length;
 							count++;
 						}
-						System.out.println("Response: +OK " + count + " " + totalByte);
 						outToClient.writeBytes("+OK " + count + " " + totalByte + CRLF);
+						LOGGER.info(this.getName() + " STAT +OK");
 						break;
 					case "LIST":
 						if(!this.clientStatus.equalsIgnoreCase(this.TRANSACTION)){
 							outToClient.writeBytes("-ERR Requrired to make AUTH" +CRLF);
+							LOGGER.info(this.getName() + " LIST -ERR Requrired to make AUTH" );
 						}
-						System.out.println("LIST COMMENDED: " + command);
 						String msg = command.trim().substring(4).trim();
 
 						if (msg.length() > 0) {
 							int index = Integer.valueOf(msg);
 							if ((index - 1) >= mails.size()) {
 								outToClient.writeBytes("-ERR no such message, Please check the LIST again." + CRLF);
+								LOGGER.info(this.getName() + " LIST -ERR no such message, Please check the LIST again.");
 							} else {
 								outToClient.writeBytes("+OK " + index + " " + mails.get(index - 1).getMessage().length() + CRLF);
+								LOGGER.info(this.getName() + " LIST +OK");
 							}
 							break;
 						}
@@ -128,13 +135,15 @@ public class POP3Thread extends Thread {
 								outToClient.writeBytes((i + 1) + " " + mails.get(i).getMessage().getBytes().length + CRLF);
 							}
 							outToClient.writeBytes(CRLF + "." + CRLF);
+							LOGGER.info(this.getName() + " LIST +OK");
 						}
 						break;
 					case "UIDL":
+						LOGGER.info(this.getName() + " COMMENDED: " +command);
 						if(!this.clientStatus.equalsIgnoreCase(this.TRANSACTION)){
 							outToClient.writeBytes("-ERR Requrired to make AUTH" +CRLF);
+							LOGGER.info(this.getName() + " -ERR Requrired to make AUTH");
 						}
-						System.out.println("UIDL commanded: " + envelopHashMap.size());
 						if (envelopHashMap.size() == 0) {
 							for (Envelop envelop : mails) {
 								String key = genKey(envelopHashMap);
@@ -150,55 +159,61 @@ public class POP3Thread extends Thread {
 							}
 							outToClient.writeBytes(CRLF + "." + CRLF);
 						}
+						LOGGER.info(this.getName() + " UIDL +OK");
 						break;
 					case "RETR":
 						if(!this.clientStatus.equalsIgnoreCase(this.TRANSACTION)){
 							outToClient.writeBytes("-ERR Requrired to make AUTH" +CRLF);
+							LOGGER.info(this.getName() + " RETR -ERR Requrired to make AUTH");
 						}
 						int index = Integer.valueOf(command.substring(5));
 						if( (index -1) >= mails.size() ){
 							outToClient.writeBytes("-ERR no such message, LIMIT: " + mails.size() + "  " + CRLF);
+							LOGGER.info(this.getName() + " RETR -ERR no such message, LIMIT: " + mails.size());
 						}
 
 						outToClient.writeBytes("+OK " + mails.get(index - 1).getMessage().length() + CRLF);
 						outToClient.writeBytes(mails.get(index - 1).getHeader() + CRLF);
 						outToClient.writeBytes(mails.get(index - 1).getMessage());
 						outToClient.writeBytes(CRLF + "." + CRLF);
+						LOGGER.info(this.getName() + " RETR +OK");
 						break;
 					case "DELE":
 						if(!this.clientStatus.equalsIgnoreCase(this.TRANSACTION)){
 							outToClient.writeBytes("-ERR Requrired to make AUTH" +CRLF);
+							LOGGER.info(this.getName() + " DELE -ERR Requrired to make AUTH ");
 						}
 						// Delete from H2
 						int i = Integer.valueOf(command.substring(5));
-						System.out.println("SENDING MEEING ID =====  " + mails.get(i - 1).getMeetingID());
 
 						for(String mailTo : mails.get(i - 1).getMailTo()) {
 							if (deleteEmail(mails.get(i - 1).getMeetingID(), mailTo)) {
 								System.out.println("DELETED");
 								outToClient.writeBytes("+OK Message Deleted" + CRLF);
+								LOGGER.info(this.getName() + " DELE +OK");
 								break;
 							}
 						}
 						outToClient.writeBytes("-ERR" + CRLF);
+						LOGGER.info(this.getName() + " DELE -ERR");
 						break;
 					case "QUIT":
-						System.out.println("QUIT COMMENDED: ");
 						outToClient.writeBytes("+OK" + CRLF);
 						client.close();
+						LOGGER.info(this.getName() + " QUIT +OK");
 						break;
 					default:
-						System.out.println("Undefined command: ( " + command + " )");
 						outToClient.writeBytes("-ERR Undefined command" + CRLF);
+						LOGGER.info("COMMENDED UNDEFINED: " +command);
 						break;
 				}
 			}
 		} catch(IndexOutOfBoundsException e){
-			System.out.println(e.getMessage());
+			LOGGER.info(this.getName() + "[" + e.getMessage() +"]");
 		} catch(IOException e){
-			e.printStackTrace();
+			LOGGER.info(this.getName() + "[" + e.getMessage() +"]");
 		} catch(Exception e){
-			System.out.println(e.getClass() + " === " + e.getMessage());
+			LOGGER.info(this.getName() + "[" + e.getClass() + "] === " + "[" + e.getMessage() +"]");
 		} finally {
 			try{
 				client.close();
@@ -269,7 +284,7 @@ public class POP3Thread extends Thread {
 
 			// Execute a query
 			stmt = conn.createStatement();
-			System.out.println("DELETING MEEING ID : "+meetingID);
+			LOGGER.info("DELETING MEEING ID : " + meetingID + " User: " + mailTo);
 			String sql = "DELETE FROM MAIL WHERE MEETINGID='"+ meetingID +"' AND MAIL_TO='"+ mailTo +"';";
 
 			stmt.executeUpdate(sql);

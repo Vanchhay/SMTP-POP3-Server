@@ -1,10 +1,14 @@
 package app;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.*;
 import java.net.*;
-//import
 
 class SMTPServer {
+
+	private final static Logger LOGGER = LoggerFactory.getLogger(POP3Server.class);
 
 	public static void main(String argv[]) {
 		ServerSocket server;
@@ -14,8 +18,8 @@ class SMTPServer {
 			while(true){
 				client = server.accept();
 				if(client.isConnected()) {
-					System.out.println("CONNECTED =============================");
 					SMTPThread st = new SMTPThread(server, client);
+					LOGGER.info("New Client Connected on Thread : " + st);
 					st.start();
 				}
 			}

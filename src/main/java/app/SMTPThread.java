@@ -1,5 +1,8 @@
 package app;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -13,6 +16,7 @@ import java.sql.Statement;
 public class SMTPThread extends Thread {
 
 	protected final static String CRLF = "\r\n";
+	private final static Logger LOGGER = LoggerFactory.getLogger(POP3Server.class);
 
 	public Envelop email = null;
 	public ServerSocket server;
@@ -35,13 +39,12 @@ public class SMTPThread extends Thread {
 			if (client.isConnected()) {
 				inFromClient = new BufferedReader(new InputStreamReader(client.getInputStream()));
 				outToClient = new DataOutputStream(client.getOutputStream());
-				System.out.println("Connection Accepted");
 				outToClient.writeBytes("220" + CRLF);
+				LOGGER.info("GREETING RESPONSED");
 			}
 
 			while (!client.isClosed()) {
 				command = inFromClient.readLine();
-				System.out.println("Received: " + command);
 
 				// Spliting command
 				String splitedCommand[];
@@ -53,31 +56,36 @@ public class SMTPThread extends Thread {
 				switch (splitedCommand[0].trim().toUpperCase()) {
 					case "HELO":
 						outToClient.writeBytes("250 Hello " + CRLF);
+						LOGGER.info(this.getName() + " HELO 250 Hello");
 						break;
 					case "EHLO":
 						outToClient.writeBytes("250 Hello " + CRLF);
+						LOGGER.info(this.getName() + " EHLO 250 Hello");
 						break;
 					case "MAIL FROM":
-						System.out.println("mail from");
 						email = new Envelop();
 
 						String mailFrom = extractEmail(splitedCommand[1]);
+						this.setName(getHostOfEmail(mailFrom));
 						if (isValidEmail(mailFrom)) {
 							email.setMailFrom(mailFrom);
 							email.setStatus(email.MAIL_FROM);
 							outToClient.writeBytes("250 <" + mailFrom + "> Accepted." + CRLF);
+							LOGGER.info(this.getName() + " MAIL_FROM 250 <" + mailFrom + "> Accepted.");
 						} else {
 							outToClient.writeBytes("421 Service not available, closing transmission channel" + CRLF);
+							LOGGER.info(this.getName() + " MAIL_FROM 421 Service not available, closing transmission channel");
 						}
 						break;
 					case "RCPT TO":
-						System.out.println("rcpt to");
 						if (email == null) {
 							outToClient.writeBytes("Email null, MAIL FROM Command is missing." + CRLF);
+							LOGGER.info(this.getName() + " RCPT_TO Email null, MAIL FROM Command is missing.");
 							break;
 						} else {
 							if ((!(email.getStatus().equalsIgnoreCase(email.MAIL_FROM))) && !(email.getStatus().equalsIgnoreCase(email.RCPT_TO))) {
 								outToClient.writeBytes("500 Syntax error, command unrecognised. Did you forget MAIL FROM Command." + CRLF);
+								LOGGER.info(this.getName() + " RCPT_TO 500 Syntax error, command unrecognised. Did you forget MAIL FROM Command.");
 								break;
 							}
 							if (((email.getStatus().equalsIgnoreCase(email.MAIL_FROM)))) {
@@ -87,22 +95,26 @@ public class SMTPThread extends Thread {
 							if (isValidEmail(mailTo)) {
 								email.setMailTo(mailTo);
 								outToClient.writeBytes("250 <" + mailTo + "> Accepted" + CRLF);
+								LOGGER.info(this.getName() + " RCPT_TO 250 <" + mailTo + "> Accepted");
 							} else {
 								outToClient.writeBytes("421 Service not available, closing transmission channel." + CRLF);
+								LOGGER.info(this.getName() + " RCPT_TO 421 Service not available, closing transmission channel.");
 							}
 						}
 						break;
 					case "DATA":
-						System.out.println("Data");
 						if (email == null) {
 							outToClient.writeBytes("Email null, MAIL FROM Command is missing." + CRLF);
+							LOGGER.info(this.getName() + " DATA Email null, MAIL FROM Command is missing.");
 							break;
 						}
 						if (!(email.getStatus().equalsIgnoreCase(email.RCPT_TO))) {
 							outToClient.writeBytes("500 Syntax error, command unrecognised." + CRLF);
+							LOGGER.info(this.getName() + " DATA 500 Syntax error, command unrecognised.");
 							break;
 						}
 						outToClient.writeBytes("354 Start mail input; end with <CRLF>.<CRLF>" + CRLF);
+						LOGGER.info(this.getName() + " DATA 354 Start mail input; end with <CRLF>.<CRLF>");
 
 						// After get the message then send
 						String data;
@@ -120,7 +132,6 @@ public class SMTPThread extends Thread {
 
 							if (data.getBytes().length == 0) {
 								if (!startMessage) {
-									System.out.println("Start add message");
 									startMessage = true;
 									continue;
 								}
@@ -130,16 +141,16 @@ public class SMTPThread extends Thread {
 									if (data.trim().startsWith(".")) {
 										if (addToH2(email)) {
 											email.setStatus(email.SENT);
-											System.out.println("SUCCESS ADD TO H2");
-											outToClient.writeBytes("250 Email has successfully sent." + CRLF);
+											LOGGER.info(this.getName() + " ADDED TO H2");
+											outToClient.writeBytes(" DATA_MESSAGE 250 Email has successfully sent." + CRLF);
 											break;
 										} else {
 											outToClient.writeBytes("552 Transaction Fail." + CRLF);
+											LOGGER.info(this.getName() + " DATA_MESSAGE 552 Transaction Fail.");
 											client.close();
 											break;
 										}
 									}
-									System.out.println(data);
 									email.setMessage(email.getMessage().concat(data + '\n'));
 									continue;
 								} else {
@@ -157,23 +168,23 @@ public class SMTPThread extends Thread {
 						}
 						break;
 					case "QUIT":
-						System.out.println("QUIT");
 						outToClient.writeBytes("221 Bye ");
+						LOGGER.info(this.getName()+ " QUIT 221 Bye ");
 						client.close();
 						break;
 					default:
-						System.out.println("Default");
 						outToClient.writeBytes("Please try again! " + CRLF);
+						LOGGER.info(this.getName() + " DEFAULT UNDEFINDED COMMAND +OK");
 						break;
 				}
 			}
 		} catch(Exception e){
-			System.out.println(e.getClass() + " === " + e.getMessage());
+			LOGGER.info(this.getName() +"  "+ e.getClass() + " === " + e.getMessage());
 		} finally {
 			try{
 				client.close();
 			}catch(IOException e){
-				e.printStackTrace();
+				LOGGER.info(this.getName() +"  "+ e.getMessage());
 			}
 		}
 	}
