@@ -8,7 +8,7 @@ import java.net.*;
 
 class SMTPServer {
 
-	private final static Logger LOGGER = LoggerFactory.getLogger(POP3Server.class);
+	private final static Logger LOGGER = LoggerFactory.getLogger(SMTPServer.class);
 
 	public static void main(String argv[]) {
 		ServerSocket server;

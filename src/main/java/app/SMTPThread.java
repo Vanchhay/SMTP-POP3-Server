@@ -16,7 +16,7 @@ import java.sql.Statement;
 public class SMTPThread extends Thread {
 
 	protected final static String CRLF = "\r\n";
-	private final static Logger LOGGER = LoggerFactory.getLogger(POP3Server.class);
+	private final static Logger LOGGER = LoggerFactory.getLogger(SMTPThread.class);
 
 	public Envelop email = null;
 	public ServerSocket server;
