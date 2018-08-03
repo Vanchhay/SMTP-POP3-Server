@@ -251,20 +251,27 @@ public class SMTPThread extends Thread {
 			stmt.close();
 			conn.close();
 		} catch(SQLException se) {
-			se.printStackTrace();
+			LOGGER.info("SQLException : " + se.getMessage());
 			return false;
 		} catch(Exception e) {
-			e.printStackTrace();
+			LOGGER.info("Exception : " + e.getMessage());
 			return false;
 		} finally {
 			try {
-				if(stmt!=null) stmt.close();
+				if(stmt!=null) {
+					LOGGER.info("FINALLY stmt(!null) => close");
+					stmt.close();
+				}
 			} catch(SQLException se2) {
+				LOGGER.info("FINALLY stmt(!null) [SQLException] =>  " + se2.getMessage());
 			}
 			try {
-				if(conn!=null) conn.close();
+				if(conn!=null) {
+					LOGGER.info("FINALLY conn(!null) => close");
+					conn.close();
+				}
 			} catch(SQLException se) {
-				se.printStackTrace();
+				LOGGER.info("FINALLY conn(!null) [SQLException] =>  " + se.getMessage());
 			}
 		}
 		return true;
