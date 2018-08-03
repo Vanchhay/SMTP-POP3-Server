@@ -229,6 +229,7 @@ public class SMTPThread extends Thread {
 					"CREATE_AT TIMESTAMP DEFAULT CURRENT_TIMESTAMP," +
 					")";
 			stmt.executeUpdate(table);
+			LOGGER.info("TABLE CREATED");
 
 			// Execute a query
 			for (String mailTo : email.getMailTo()) {
@@ -242,8 +243,9 @@ public class SMTPThread extends Thread {
 						"'" + mailTo + "', " +
 						"current_timestamp()" +
 						")";
-
+				LOGGER.info("==== INSERT STATEMENT: " +insert);
 				stmt.executeUpdate(insert);
+				LOGGER.info("==== STATEMENT INSERTED" );
 			}
 
 			stmt.close();
