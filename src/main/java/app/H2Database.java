@@ -5,11 +5,10 @@ import org.slf4j.LoggerFactory;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.SQLException;
 
 public class H2Database {
 
-	private final static Logger LOGGER = LoggerFactory.getLogger(POP3Server.class);
+	private final static Logger LOGGER = LoggerFactory.getLogger(H2Database.class);
 
 	static final String JDBC_DRIVER = "org.h2.Driver";
 	static final String DB_URL = "jdbc:h2:tcp://localhost/~/test";
@@ -25,11 +24,8 @@ public class H2Database {
 		try{
 			Class.forName(JDBC_DRIVER);
 			connection = DriverManager.getConnection(DB_URL, USER, PASS);
-		}catch(ClassNotFoundException e){
-			e.printStackTrace();
-
-		}catch(SQLException e){
-			e.printStackTrace();
+		}catch(Exception e){
+			LOGGER.info("Exception H2 : " + e.getMessage());
 		}
 		LOGGER.info("H2 CONNECTION SUCCESS");
 		return connection;

@@ -183,6 +183,7 @@ public class SMTPThread extends Thread {
 		} finally {
 			try{
 				client.close();
+				LOGGER.info(this.getName() + " Closed");
 			}catch(IOException e){
 				LOGGER.info(this.getName() +"  "+ e.getMessage());
 			}

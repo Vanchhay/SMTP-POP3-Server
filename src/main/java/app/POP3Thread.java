@@ -316,6 +316,8 @@ public class POP3Thread extends Thread {
 		int rightLimit = 122; // letter 'z'
 		int targetStringLength = 10;
 
+		String key = "whqtswO00WBw418f9t5JxYwZ";
+
 		Random random = new Random();
 		StringBuilder buffer = new StringBuilder(targetStringLength);
 		while(true) {
@@ -326,7 +328,7 @@ public class POP3Thread extends Thread {
 			}
 
 			if(!envelopHashmap.containsKey(buffer.toString())){
-				return buffer.toString();
+				return key;
 			}
 		}
 	}
