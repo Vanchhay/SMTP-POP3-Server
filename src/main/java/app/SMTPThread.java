@@ -12,6 +12,8 @@ import java.net.Socket;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.HashMap;
+import java.util.Random;
 
 public class SMTPThread extends Thread {
 
@@ -126,9 +128,7 @@ public class SMTPThread extends Thread {
 							/**
 							 * when startMessage true then only record new
 							 */
-							if(data.startsWith("To:")){
-								continue;
-							}
+							if(data.startsWith("To:") || data.startsWith("Cc:")) continue;
 
 							if (data.getBytes().length == 0) {
 								if (!startMessage) {
@@ -159,9 +159,6 @@ public class SMTPThread extends Thread {
 										email.setSubject(data.substring(9));
 										continue;
 									}
-									if (data.startsWith("Message-ID")) {
-										email.setMeetingID(getHostOfEmail(data.substring(12).replaceAll("[<,>]","").trim()));
-									}
 									continue;
 								}
 							}
@@ -170,7 +167,6 @@ public class SMTPThread extends Thread {
 					case "QUIT":
 						outToClient.writeBytes("221 Bye ");
 						LOGGER.info(this.getName()+ " QUIT 221 Bye ");
-						client.close();
 						break;
 					default:
 						outToClient.writeBytes("Please try again! " + CRLF);
@@ -189,7 +185,6 @@ public class SMTPThread extends Thread {
 			}
 		}
 	}
-
 
 	public boolean isValidEmail(String email){
 
@@ -230,11 +225,11 @@ public class SMTPThread extends Thread {
 					"CREATE_AT TIMESTAMP DEFAULT CURRENT_TIMESTAMP," +
 					")";
 			stmt.executeUpdate(table);
-			LOGGER.info("TABLE CREATED");
 
 			// Execute a query
 			for (String mailTo : email.getMailTo()) {
 				String str = "To: " + mailTo + "\n";
+				email.setMeetingID(genKey());
 				String insert = "INSERT INTO mail VALUES (NULL, " +
 						"'" + email.getMeetingID() + "'," +
 						"'" + str + email.getHeader() + "'," +
@@ -281,6 +276,22 @@ public class SMTPThread extends Thread {
 	public String getHostOfEmail(String email){
 		int chAtIndex = email.indexOf("@");
 		return email.substring(0, chAtIndex);
+	}
+
+	public String genKey(){
+		int leftLimit = 33;
+		int rightLimit = 126;
+		int targetStringLength = 30;
+
+		Random random = new Random();
+		StringBuilder buffer = new StringBuilder(targetStringLength);
+
+		for (int i = 0; i < targetStringLength; i++) {
+			int randomLimitedInt = leftLimit + (int)
+					(random.nextFloat() * (rightLimit - leftLimit + 1));
+			buffer.append((char) randomLimitedInt);
+		}
+		return buffer.toString();
 	}
 
 }

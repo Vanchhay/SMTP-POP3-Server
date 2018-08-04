@@ -146,8 +146,7 @@ public class POP3Thread extends Thread {
 						}
 						if (envelopHashMap.size() == 0) {
 							for (Envelop envelop : mails) {
-								String key = genKey(envelopHashMap);
-								envelopHashMap.put(key,envelop);
+								envelopHashMap.put( envelop.getMeetingID(), envelop);
 							}
 						}
 						if (envelopHashMap.size() > 0) {
@@ -185,13 +184,13 @@ public class POP3Thread extends Thread {
 						}
 						// Delete from H2
 						int i = Integer.valueOf(command.substring(5));
-
-						for(String mailTo : mails.get(i - 1).getMailTo()) {
-							if (deleteEmail(mails.get(i - 1).getMeetingID(), mailTo)) {
-								System.out.println("DELETED");
-								outToClient.writeBytes("+OK Message Deleted" + CRLF);
-								LOGGER.info(this.getName() + " DELE +OK");
-								break;
+						if(i > 0) {
+							for (String mailTo : mails.get(i - 1).getMailTo()) {
+								if (deleteEmail(mails.get(i - 1).getMeetingID(),mailTo)) {
+									outToClient.writeBytes("+OK Message Deleted" + CRLF);
+									LOGGER.info(this.getName() + " DELE " + (i - 1) + " +OK");
+									break;
+								}
 							}
 						}
 						outToClient.writeBytes("-ERR" + CRLF);
@@ -311,26 +310,5 @@ public class POP3Thread extends Thread {
 		return false;
 	}
 
-	public String genKey(HashMap<String, Envelop> envelopHashmap){
-		int leftLimit = 97; // letter 'a'
-		int rightLimit = 122; // letter 'z'
-		int targetStringLength = 10;
-
-		String key = "whqtswO00WBw418f9t5JxYwZ";
-
-		Random random = new Random();
-		StringBuilder buffer = new StringBuilder(targetStringLength);
-		while(true) {
-			for (int i = 0; i < targetStringLength; i++) {
-				int randomLimitedInt = leftLimit + (int)
-						(random.nextFloat() * (rightLimit - leftLimit + 1));
-				buffer.append((char) randomLimitedInt);
-			}
-
-			if(!envelopHashmap.containsKey(buffer.toString())){
-				return key;
-			}
-		}
-	}
 
 }
