@@ -3,14 +3,14 @@ package app;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Envelop {
+public class Envelope {
 
 	private String mailFrom;
 	private String subject;
 	private String message = "";
 	private String status;
 	private String header = "";
-	private String meetingID;
+	private String uid;
 
 	private  List<String> mailTo = new ArrayList<>();
 
@@ -19,8 +19,8 @@ public class Envelop {
 	protected final String DATA = "DATA";
 	protected final String SENT = "SENT";
 
-	public Envelop(String meetingID, String header, String subject, String message, String mailFrom, List<String> mailTo) {
-		this.meetingID = meetingID;
+	public Envelope(String uid, String header, String subject, String message, String mailFrom, List<String> mailTo) {
+		this.uid = uid;
 		this.header = header;
 		this.subject = subject;
 		this.message = message;
@@ -28,7 +28,7 @@ public class Envelop {
 		this.mailTo = mailTo;
 	}
 
-	public Envelop() {
+	public Envelope() {
 		this.status = MAIL_FROM;
 	}
 
@@ -68,8 +68,8 @@ public class Envelop {
 		return mailTo;
 	}
 
-	public void setMailTo(String mailTo) {
-		this.mailTo.add(mailTo);
+	public void setMailTo(List mailTo) {
+		this.mailTo = mailTo;
 	}
 
 	public String getHeader() {
@@ -80,12 +80,12 @@ public class Envelop {
 		this.header = header;
 	}
 
-	public String getMeetingID() {
-		return meetingID;
+	public String getUid() {
+		return uid;
 	}
 
-	public void setMeetingID(String meetingID) {
-		this.meetingID = meetingID;
+	public void setUid(String uid) {
+		this.uid = uid;
 	}
 
 }

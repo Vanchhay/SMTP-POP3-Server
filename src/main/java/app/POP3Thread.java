@@ -39,8 +39,8 @@ public class POP3Thread extends Thread {
 		String command;
 
 		String user = null;
-		List<Envelop> mails = new ArrayList<>();
-		HashMap<String, Envelop> envelopHashMap = new HashMap<>();
+		List<Envelope> mails = new ArrayList<>();
+		HashMap<String, Envelope> envelopeHashMap = new HashMap<>();
 		int totalByte = 0;
 
 		try {
@@ -104,8 +104,8 @@ public class POP3Thread extends Thread {
 						}
 						mails = getInboxWhereFrom(user);
 						int count = 0;
-						for (Envelop envelop : mails) {
-							totalByte += envelop.getMessage().getBytes().length;
+						for (Envelope envelope : mails) {
+							totalByte += envelope.getMessage().getBytes().length;
 							count++;
 						}
 						outToClient.writeBytes("+OK " + count + " " + totalByte + CRLF);
@@ -144,15 +144,15 @@ public class POP3Thread extends Thread {
 							outToClient.writeBytes("-ERR Requrired to make AUTH" +CRLF);
 							LOGGER.info(this.getName() + " -ERR Requrired to make AUTH");
 						}
-						if (envelopHashMap.size() == 0) {
-							for (Envelop envelop : mails) {
-								envelopHashMap.put( envelop.getMeetingID(), envelop);
+						if (envelopeHashMap.size() == 0) {
+							for (Envelope envelope : mails) {
+								envelopeHashMap.put( envelope.getUid(), envelope);
 							}
 						}
-						if (envelopHashMap.size() > 0) {
+						if (envelopeHashMap.size() > 0) {
 							outToClient.writeBytes("+OK" + CRLF);
 							int index = 1;
-							for (String key : envelopHashMap.keySet()) {
+							for (String key : envelopeHashMap.keySet()) {
 								System.out.println((index) + " " + key);
 								outToClient.writeBytes((index++) + " " + key + CRLF);
 							}
@@ -186,7 +186,7 @@ public class POP3Thread extends Thread {
 						int i = Integer.valueOf(command.substring(5));
 						if(i > 0) {
 							for (String mailTo : mails.get(i - 1).getMailTo()) {
-								if (deleteEmail(mails.get(i - 1).getMeetingID(),mailTo)) {
+								if (deleteEmail(mails.get(i - 1).getUid(),mailTo)) {
 									outToClient.writeBytes("+OK Message Deleted" + CRLF);
 									LOGGER.info(this.getName() + " DELE " + (i - 1) + " +OK");
 									break;
@@ -222,11 +222,11 @@ public class POP3Thread extends Thread {
 		}
 	}
 
-	public List<Envelop> getInboxWhereFrom(String mailTo){
+	public List<Envelope> getInboxWhereFrom(String mailTo){
 
 		Connection conn = null ;
 		Statement stmt = null;
-		List<Envelop> mails = new ArrayList<>();
+		List<Envelope> mails = new ArrayList<>();
 
 		try{
 
@@ -244,15 +244,15 @@ public class POP3Thread extends Thread {
 				for (String s : rs.getString("MAIL_TO").split(",")) {
 					mailToList.add(s);
 				}
-				Envelop envelop = new Envelop(
-						rs.getString("MEETINGID"),
+				Envelope envelope = new Envelope(
+						rs.getString("UID"),
 						rs.getString("HEADER"),
 						rs.getString("SUBJECT"),
 						rs.getString("MESSAGE"),
 						rs.getString("MAIL_FROM"),
 						mailToList  );
 
-				mails.add(envelop);
+				mails.add(envelope);
 			}
 			stmt.close();
 			conn.close();

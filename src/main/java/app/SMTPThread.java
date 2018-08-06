@@ -12,7 +12,8 @@ import java.net.Socket;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 
 public class SMTPThread extends Thread {
@@ -20,9 +21,10 @@ public class SMTPThread extends Thread {
 	protected final static String CRLF = "\r\n";
 	private final static Logger LOGGER = LoggerFactory.getLogger(SMTPThread.class);
 
-	public Envelop email = null;
+	public Envelope email = null;
 	public ServerSocket server;
 	public Socket client;
+	List<String> mailToList = new ArrayList<>();
 
 	public SMTPThread(ServerSocket server, Socket client) {
 		this.server = server;
@@ -65,7 +67,7 @@ public class SMTPThread extends Thread {
 						LOGGER.info(this.getName() + " EHLO 250 Hello");
 						break;
 					case "MAIL FROM":
-						email = new Envelop();
+						email = new Envelope();
 
 						String mailFrom = extractEmail(splitedCommand[1]);
 						this.setName(getHostOfEmail(mailFrom));
@@ -95,7 +97,7 @@ public class SMTPThread extends Thread {
 							}
 							String mailTo = extractEmail(splitedCommand[1]);
 							if (isValidEmail(mailTo)) {
-								email.setMailTo(mailTo);
+								mailToList.add(mailTo);
 								outToClient.writeBytes("250 <" + mailTo + "> Accepted" + CRLF);
 								LOGGER.info(this.getName() + " RCPT_TO 250 <" + mailTo + "> Accepted");
 							} else {
@@ -103,6 +105,7 @@ public class SMTPThread extends Thread {
 								LOGGER.info(this.getName() + " RCPT_TO 421 Service not available, closing transmission channel.");
 							}
 						}
+						email.setMailTo(mailToList);
 						break;
 					case "DATA":
 						if (email == null) {
@@ -128,7 +131,6 @@ public class SMTPThread extends Thread {
 							/**
 							 * when startMessage true then only record new
 							 */
-							if(data.startsWith("To:") || data.startsWith("Cc:")) continue;
 
 							if (data.getBytes().length == 0) {
 								if (!startMessage) {
@@ -206,7 +208,7 @@ public class SMTPThread extends Thread {
 		return unExtractMail.replaceAll("[<,>]", "").trim();
 	}
 
-	public boolean addToH2(Envelop email){
+	public boolean addToH2(Envelope email){
 		Connection conn = null;
 		Statement stmt = null;
 
@@ -216,7 +218,7 @@ public class SMTPThread extends Thread {
 
 			String table = "CREATE TABLE IF NOT EXISTS MAIL(" +
 					"ID BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT," +
-					"MEETINGID VARCHAR(225) NOT NULL," +
+					"UID VARCHAR(225) NOT NULL," +
 					"HEADER TEXT NOT NULL," +
 					"SUBJECT VARCHAR(50)," +
 					"MESSAGE TEXT," +
@@ -228,11 +230,10 @@ public class SMTPThread extends Thread {
 
 			// Execute a query
 			for (String mailTo : email.getMailTo()) {
-				String str = "To: " + mailTo + "\n";
-				email.setMeetingID(genKey());
+				email.setUid(genKey());
 				String insert = "INSERT INTO mail VALUES (NULL, " +
-						"'" + email.getMeetingID() + "'," +
-						"'" + str + email.getHeader() + "'," +
+						"'" + email.getUid() + "'," +
+						"'" + email.getHeader() + "'," +
 						"'" + email.getSubject() + "'," +
 						"'" + email.getMessage() + "', " +
 						"'" + email.getMailFrom() + "', " +
