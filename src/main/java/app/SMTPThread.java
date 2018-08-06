@@ -168,6 +168,7 @@ public class SMTPThread extends Thread {
 						break;
 					case "QUIT":
 						outToClient.writeBytes("221 Bye ");
+						client.close();
 						LOGGER.info(this.getName()+ " QUIT 221 Bye ");
 						break;
 					default:
@@ -180,8 +181,10 @@ public class SMTPThread extends Thread {
 			LOGGER.info(this.getName() +"  "+ e.getClass() + " === " + e.getMessage());
 		} finally {
 			try{
-				client.close();
-				LOGGER.info(this.getName() + " Closed");
+				if(client != null) {
+					client.close();
+					LOGGER.info(this.getName() + " FINALLY Closed");
+				}
 			}catch(IOException e){
 				LOGGER.info(this.getName() +"  "+ e.getMessage());
 			}
