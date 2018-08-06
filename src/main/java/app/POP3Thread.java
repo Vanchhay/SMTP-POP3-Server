@@ -58,6 +58,7 @@ public class POP3Thread extends Thread {
 
 			while (!client.isClosed()) {
 				command = inFromClient.readLine();
+				if(command.length() == 0) continue;
 
 				switch (command.substring(0,4).toUpperCase()) {
 					case "AUTH":
@@ -95,14 +96,16 @@ public class POP3Thread extends Thread {
 //						String pass = command.substring(5).trim();
 						outToClient.writeBytes("+OK procced your wish" + CRLF);
 						LOGGER.info(this.getName() + " PASS: <>");
+
+						// if user is authenticated then getEmail
 						this.clientStatus = this.TRANSACTION;
+						mails = getInboxWhereFrom(user);
 						break;
 					case "STAT":
 						if(!this.clientStatus.equalsIgnoreCase(this.TRANSACTION)){
 							outToClient.writeBytes("-ERR Requrired to make AUTH" +CRLF);
 							LOGGER.info(this.getName() + " STAT -ERR Requrired to make AUTH" );
 						}
-						mails = getInboxWhereFrom(user);
 						int count = 0;
 						for (Envelope envelope : mails) {
 							totalByte += envelope.getMessage().getBytes().length;
@@ -188,13 +191,13 @@ public class POP3Thread extends Thread {
 							for (String mailTo : mails.get(i - 1).getMailTo()) {
 								if (deleteEmail(mails.get(i - 1).getUid(),mailTo)) {
 									outToClient.writeBytes("+OK Message Deleted" + CRLF);
-									LOGGER.info(this.getName() + " DELE " + (i - 1) + " +OK");
+									LOGGER.info(this.getName() + " DELE " + i + " +OK");
 									break;
 								}
 							}
 						}
-						outToClient.writeBytes("-ERR" + CRLF);
-						LOGGER.info(this.getName() + " DELE -ERR");
+						outToClient.writeBytes("-ERR Out of index" + CRLF);
+						LOGGER.info(this.getName() + " DELE -ERR Out of index");
 						break;
 					case "QUIT":
 						outToClient.writeBytes("+OK" + CRLF);
@@ -274,7 +277,7 @@ public class POP3Thread extends Thread {
 		return mails;
 	}
 
-	public boolean deleteEmail(String meetingID, String mailTo){
+	public boolean deleteEmail(String uid, String mailTo){
 		Connection conn = null;
 		Statement stmt = null;
 
@@ -283,8 +286,8 @@ public class POP3Thread extends Thread {
 
 			// Execute a query
 			stmt = conn.createStatement();
-			LOGGER.info("DELETING MEEING ID : " + meetingID + " User: " + mailTo);
-			String sql = "DELETE FROM MAIL WHERE MEETINGID='"+ meetingID +"' AND MAIL_TO='"+ mailTo +"';";
+			LOGGER.info("DELETING User : [" + mailTo + "] Uid: " + uid);
+			String sql = "DELETE FROM MAIL WHERE UID='"+ uid +"' AND MAIL_TO='"+ mailTo +"';";
 
 			stmt.executeUpdate(sql);
 

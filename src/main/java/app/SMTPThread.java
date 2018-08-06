@@ -49,6 +49,7 @@ public class SMTPThread extends Thread {
 
 			while (!client.isClosed()) {
 				command = inFromClient.readLine();
+				if(command.length() == 0) continue;
 
 				// Spliting command
 				String splitedCommand[];
