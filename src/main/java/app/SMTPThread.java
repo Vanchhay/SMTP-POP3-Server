@@ -10,6 +10,7 @@ import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
@@ -106,7 +107,6 @@ public class SMTPThread extends Thread {
 								LOGGER.info(this.getName() + " RCPT_TO 421 Service not available, closing transmission channel.");
 							}
 						}
-						email.setMailTo(mailToList);
 						break;
 					case "DATA":
 						if (email == null) {
@@ -233,20 +233,21 @@ public class SMTPThread extends Thread {
 			stmt.executeUpdate(table);
 
 			// Execute a query
-			for (String mailTo : email.getMailTo()) {
+			for (String mailTo : mailToList) {
 				email.setUid(genKey());
-				String insert = "INSERT INTO mail VALUES (NULL, " +
-						"'" + email.getUid() + "'," +
-						"'" + email.getHeader() + "'," +
-						"'" + email.getSubject() + "'," +
-						"'" + email.getMessage() + "', " +
-						"'" + email.getMailFrom() + "', " +
-						"'" + mailTo + "', " +
-						"current_timestamp()" +
-						")";
+				String insert = "INSERT INTO mail (ID, UID, HEADER, SUBJECT, MESSAGE, MAIL_FROM, MAIL_TO, CREATE_AT) " +
+						"VALUES (null, ?, ?, ?, ?, ?, ?, current_timestamp())";
+				PreparedStatement pstmt = conn.prepareStatement(insert);
+				pstmt.setString(1, email.getUid());
+				pstmt.setString(2, email.getHeader());
+				pstmt.setString(3, email.getSubject());
+				pstmt.setString(4, email.getMessage());
+				pstmt.setString(5, email.getMailFrom());
+				pstmt.setString(6, mailTo);
 				LOGGER.info("==== INSERT STATEMENT: " +insert);
-				stmt.executeUpdate(insert);
+				pstmt.executeUpdate();
 				LOGGER.info("==== STATEMENT INSERTED" );
+				pstmt.close();
 			}
 
 			stmt.close();
@@ -284,7 +285,7 @@ public class SMTPThread extends Thread {
 	}
 
 	public String genKey(){
-		int leftLimit = 33;
+		int leftLimit = 65;
 		int rightLimit = 126;
 		int targetStringLength = 30;
 

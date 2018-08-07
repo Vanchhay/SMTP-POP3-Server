@@ -188,12 +188,10 @@ public class POP3Thread extends Thread {
 						// Delete from H2
 						int i = Integer.valueOf(command.substring(5));
 						if(i > 0) {
-							for (String mailTo : mails.get(i - 1).getMailTo()) {
-								if (deleteEmail(mails.get(i - 1).getUid(),mailTo)) {
-									outToClient.writeBytes("+OK Message Deleted" + CRLF);
-									LOGGER.info(this.getName() + " DELE " + i + " +OK");
-									break;
-								}
+							if (deleteEmail(mails.get(i - 1).getUid(), mails.get(i - 1).getMailTo())) {
+								outToClient.writeBytes("+OK Message Deleted" + CRLF);
+								LOGGER.info(this.getName() + " DELE " + i + " +OK");
+								break;
 							}
 						}
 						outToClient.writeBytes("-ERR Out of index" + CRLF);
@@ -242,18 +240,13 @@ public class POP3Thread extends Thread {
 			ResultSet rs = stmt.executeQuery(sql);
 
 			while(rs.next()){
-
-				List<String> mailToList = new ArrayList<>();
-				for (String s : rs.getString("MAIL_TO").split(",")) {
-					mailToList.add(s);
-				}
 				Envelope envelope = new Envelope(
 						rs.getString("UID"),
 						rs.getString("HEADER"),
 						rs.getString("SUBJECT"),
 						rs.getString("MESSAGE"),
 						rs.getString("MAIL_FROM"),
-						mailToList  );
+						rs.getString("MAIL_TO"));
 
 				mails.add(envelope);
 			}

@@ -11,15 +11,14 @@ public class Envelope {
 	private String status;
 	private String header = "";
 	private String uid;
-
-	private  List<String> mailTo = new ArrayList<>();
+	private  String mailTo;
 
 	protected final String MAIL_FROM = "MAIL FROM";
 	protected final String RCPT_TO = "RCPT TO";
 	protected final String DATA = "DATA";
 	protected final String SENT = "SENT";
 
-	public Envelope(String uid, String header, String subject, String message, String mailFrom, List<String> mailTo) {
+	public Envelope(String uid, String header, String subject, String message, String mailFrom, String mailTo) {
 		this.uid = uid;
 		this.header = header;
 		this.subject = subject;
@@ -64,11 +63,11 @@ public class Envelope {
 		this.message = message;
 	}
 
-	public List<String> getMailTo() {
+	public String getMailTo() {
 		return mailTo;
 	}
 
-	public void setMailTo(List mailTo) {
+	public void setMailTo(String mailTo) {
 		this.mailTo = mailTo;
 	}
 
