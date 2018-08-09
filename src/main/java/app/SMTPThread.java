@@ -9,10 +9,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -214,43 +211,51 @@ public class SMTPThread extends Thread {
 
 	public boolean addToH2(Envelope email){
 		Connection conn = null;
-		Statement stmt = null;
+		PreparedStatement pstmt = null;
 
 		try{
 			conn = new H2Database().getConnection();
-			stmt = conn.createStatement();
-
-			String table = "CREATE TABLE IF NOT EXISTS MAIL(" +
-					"ID BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT," +
-					"UID VARCHAR(225) NOT NULL," +
-					"HEADER TEXT NOT NULL," +
-					"SUBJECT VARCHAR(50)," +
-					"MESSAGE TEXT," +
-					"MAIL_FROM VARCHAR(50) NOT NULL," +
-					"MAIL_TO VARCHAR(50) NOT NULL," +
-					"CREATE_AT TIMESTAMP DEFAULT CURRENT_TIMESTAMP," +
-					")";
-			stmt.executeUpdate(table);
 
 			// Execute a query
+			String insert = "INSERT INTO mail (ID, UID, HEADER, SUBJECT, MESSAGE, MAIL_FROM, MAIL_TO, CREATE_AT) " +
+					"VALUES (null, ?, ?, ?, ?, ?, ?, current_timestamp())";
+			String select = "SELECT * FROM MAIL WHERE UID=?";
 			for (String mailTo : mailToList) {
-				email.setUid(genKey());
-				String insert = "INSERT INTO mail (ID, UID, HEADER, SUBJECT, MESSAGE, MAIL_FROM, MAIL_TO, CREATE_AT) " +
-						"VALUES (null, ?, ?, ?, ?, ?, ?, current_timestamp())";
-				PreparedStatement pstmt = conn.prepareStatement(insert);
-				pstmt.setString(1, email.getUid());
-				pstmt.setString(2, email.getHeader());
-				pstmt.setString(3, email.getSubject());
-				pstmt.setString(4, email.getMessage());
-				pstmt.setString(5, email.getMailFrom());
-				pstmt.setString(6, mailTo);
-				LOGGER.info("==== INSERT STATEMENT: " +insert);
-				pstmt.executeUpdate();
-				LOGGER.info("==== STATEMENT INSERTED" );
-				pstmt.close();
+				while(true){
+					String key = genKey();
+					/* Check if Uid is existed */
+					pstmt = conn.prepareStatement(select);
+					pstmt.setString(1, key);
+					ResultSet rs = pstmt.executeQuery();
+					if(!rs.wasNull()) continue;
+					email.setUid(key);
+					break;
+				}
+				while(true) {
+					pstmt = conn.prepareStatement(insert);
+					pstmt.setString(1,email.getUid());
+					pstmt.setString(2,email.getHeader());
+					pstmt.setString(3,email.getSubject());
+					pstmt.setString(4,email.getMessage());
+					pstmt.setString(5,email.getMailFrom());
+					pstmt.setString(6,mailTo);
+					LOGGER.info(email.getUid() + "   ==== INSERTING . . .");
+					pstmt.executeUpdate();
+
+					/* Check if record inserted to H2 */
+					pstmt = conn.prepareStatement(select);
+					pstmt.setString(1, email.getUid());
+					ResultSet rs = pstmt.executeQuery();
+					if(rs.wasNull()){
+						LOGGER.info( email.getUid() +"  ==== INSERTING FAILED, TRYING AGAIN");
+						continue;
+					}
+					LOGGER.info(email.getUid() + "  ==== RECORD INSERTED");
+					break;
+				}
 			}
 
-			stmt.close();
+			pstmt.close();
 			conn.close();
 		} catch(SQLException se) {
 			LOGGER.info("SQLException : " + se.getMessage());
@@ -260,20 +265,20 @@ public class SMTPThread extends Thread {
 			return false;
 		} finally {
 			try {
-				if(stmt!=null) {
-					LOGGER.info("FINALLY stmt(!null) => close");
-					stmt.close();
+				if(!pstmt.isClosed()) {
+					LOGGER.info("FINALLY stmt(!close) => close");
+					pstmt.close();
 				}
 			} catch(SQLException se2) {
-				LOGGER.info("FINALLY stmt(!null) [SQLException] =>  " + se2.getMessage());
+				LOGGER.info("FINALLY stmt(!close) [SQLException] =>  " + se2.getMessage());
 			}
 			try {
-				if(conn!=null) {
-					LOGGER.info("FINALLY conn(!null) => close");
+				if(!conn.isClosed()) {
+					LOGGER.info("FINALLY conn(!close) => close");
 					conn.close();
 				}
 			} catch(SQLException se) {
-				LOGGER.info("FINALLY conn(!null) [SQLException] =>  " + se.getMessage());
+				LOGGER.info("FINALLY conn(!close) [SQLException] =>  " + se.getMessage());
 			}
 		}
 		return true;
