@@ -220,6 +220,7 @@ public class SMTPThread extends Thread {
 			String insert = "INSERT INTO mail (ID, UID, HEADER, SUBJECT, MESSAGE, MAIL_FROM, MAIL_TO, CREATE_AT) " +
 					"VALUES (null, ?, ?, ?, ?, ?, ?, current_timestamp())";
 			String select = "SELECT * FROM MAIL WHERE UID=?";
+
 			for (String mailTo : mailToList) {
 				while(true){
 					String key = genKey();
@@ -227,31 +228,33 @@ public class SMTPThread extends Thread {
 					pstmt = conn.prepareStatement(select);
 					pstmt.setString(1, key);
 					ResultSet rs = pstmt.executeQuery();
-					if(!rs.wasNull()) continue;
-					email.setUid(key);
-					break;
-				}
-				while(true) {
-					pstmt = conn.prepareStatement(insert);
-					pstmt.setString(1,email.getUid());
-					pstmt.setString(2,email.getHeader());
-					pstmt.setString(3,email.getSubject());
-					pstmt.setString(4,email.getMessage());
-					pstmt.setString(5,email.getMailFrom());
-					pstmt.setString(6,mailTo);
-					LOGGER.info(email.getUid() + "   ==== INSERTING . . .");
-					pstmt.executeUpdate();
+					if(rs.first()){
+						LOGGER.info( key + " Existed");
+						continue;
+					}
+					else{
+						email.setUid(key);
+						pstmt = conn.prepareStatement(insert);
+						pstmt.setString(1,email.getUid());
+						pstmt.setString(2,email.getHeader());
+						pstmt.setString(3,email.getSubject());
+						pstmt.setString(4,email.getMessage());
+						pstmt.setString(5,email.getMailFrom());
+						pstmt.setString(6,mailTo);
+						LOGGER.info(email.getUid() + "  ==== INSERTING . . .");
+						pstmt.executeUpdate();
 
-					/* Check if record inserted to H2 */
-					pstmt = conn.prepareStatement(select);
-					pstmt.setString(1, email.getUid());
-					ResultSet rs = pstmt.executeQuery();
-					if(rs.wasNull()){
+						/* Check if record inserted to H2 */
+						pstmt = conn.prepareStatement(select);
+						pstmt.setString(1, email.getUid());
+						rs = pstmt.executeQuery();
+						if(rs.first()){
+							LOGGER.info(rs.getString("UID") + "  ==== RECORD INSERTED");
+							break;
+						}
 						LOGGER.info( email.getUid() +"  ==== INSERTING FAILED, TRYING AGAIN");
 						continue;
 					}
-					LOGGER.info(email.getUid() + "  ==== RECORD INSERTED");
-					break;
 				}
 			}
 
