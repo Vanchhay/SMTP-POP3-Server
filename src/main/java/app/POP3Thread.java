@@ -13,7 +13,6 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Random;
 
 public class POP3Thread extends Thread {
 
@@ -258,11 +257,11 @@ public class POP3Thread extends Thread {
 			e.printStackTrace();
 		} finally {
 			try{
-				if (stmt != null) stmt.close();
+				if (!stmt.isClosed()) stmt.close();
 			}catch(SQLException se2){
 			}
 			try{
-				if (conn != null) conn.close();
+				if (!conn.isClosed()) conn.close();
 			}catch(SQLException se){
 				se.printStackTrace();
 			}
@@ -272,21 +271,28 @@ public class POP3Thread extends Thread {
 
 	public boolean deleteEmail(String uid, String mailTo){
 		Connection conn = null;
-		Statement stmt = null;
-
+		PreparedStatement pstmt = null;
+		String delete = "DELETE FROM MAIL WHERE UID=? AND MAIL_TO=?";
+		String select = "SELECT * FROM MAIL WHERE UID=?";
 		try{
 			conn = new H2Database().getConnection();
-
 			// Execute a query
-			stmt = conn.createStatement();
-			LOGGER.info("DELETING User : [" + mailTo + "] Uid: " + uid);
-			String sql = "DELETE FROM MAIL WHERE UID='"+ uid +"' AND MAIL_TO='"+ mailTo +"';";
+			while(true) {
+				LOGGER.info("DELETING Email => User : [" + mailTo + "] Uid: " + uid);
+				pstmt = conn.prepareStatement(delete);
+				pstmt.setString(1,uid);
+				pstmt.setString(2,mailTo);
+				pstmt.executeUpdate();
 
-			stmt.executeUpdate(sql);
-
-			stmt.close();
+				/* Check if record successfully deleted */
+				pstmt = conn.prepareStatement(select);
+				pstmt.setString(1, uid);
+				ResultSet rs = pstmt.executeQuery();
+				if(!rs.first()) break;
+			}
+			LOGGER.info(uid + " Successfully deleted");
+			pstmt.close();
 			conn.close();
-
 			return true;
 		} catch(SQLException se) {
 			se.printStackTrace();
@@ -294,11 +300,11 @@ public class POP3Thread extends Thread {
 			e.printStackTrace();
 		} finally {
 			try{
-				if (stmt != null) stmt.close();
+				if (!pstmt.isClosed()) pstmt.close();
 			}catch(SQLException se2){
 			}
 			try{
-				if (conn != null) conn.close();
+				if (!conn.isClosed()) conn.close();
 			}catch(SQLException se){
 				se.printStackTrace();
 			}
